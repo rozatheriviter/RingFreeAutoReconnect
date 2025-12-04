@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Ring Auto-Reconnect",
+  "version": "1.0",
+  "description": "Automatically reconnects Ring camera live view when disconnected",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.ring.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.ring.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
