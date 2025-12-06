@@ -10,6 +10,7 @@
   const CONFIG = {
     checkInterval: 1000, // Check every second
     reconnectDelay: 500, // Wait 500ms before clicking reconnect
+    refreshInterval: 300000, // Refresh page every 5 minutes (300,000ms)
     buttonSelectors: [
       'button[data-testid="reconnect-button"]',
       'button:contains("Reconnect")',
@@ -139,6 +140,12 @@
     setupObserver();
     setInterval(periodicCheck, CONFIG.checkInterval);
     
+    // Set up periodic page refresh
+    setInterval(() => {
+      console.log('Ring Auto-Reconnect: 5 minutes passed, refreshing page...');
+      window.location.reload();
+    }, CONFIG.refreshInterval);
+
     console.log('Ring Auto-Reconnect: Ready and monitoring');
   }
   
