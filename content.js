@@ -52,7 +52,18 @@
       'reconnect',
       'continue watching',
       'tap to reconnect'
-    ]
+    ],
+
+    // Selectors for the login page elements.
+    loginSelectors: {
+        password: 'input[type="password"]',
+        submit: [
+            'button[data-testid="submit-button"]',
+            'button[type="submit"]',
+            'button:contains("Sign in")',
+            'button:contains("Log in")'
+        ]
+    }
   };
   
   // GLOBAL VARIABLES
@@ -61,6 +72,9 @@
   // Stores the timestamp (time in ms) of the last time we clicked the button.
   // We use this to prevent clicking too rapidly (spamming the button).
   let lastClickTime = 0;
+
+  // Stores the timestamp of the last login attempt to prevent spamming the sign-in button.
+  let lastLoginTime = 0;
 
   // The observer monitors the webpage for changes (like a popup appearing).
   let observer = null;
@@ -164,6 +178,73 @@
   }
   
   /**
+   * FUNCTION: handleLogin
+   * ---------------------
+   * Detects if we are on a login page and attempts to sign in automatically.
+   * It checks if a password field exists and has a value (autofilled by the browser).
+   */
+  function handleLogin() {
+    const now = Date.now();
+    // Prevent spamming the login button (wait 5 seconds between attempts)
+    if (now - lastLoginTime < 5000) {
+      return;
+    }
+
+    const passwordField = document.querySelector(CONFIG.loginSelectors.password);
+
+    // If there is no password field, we aren't on the login page (or it's not loaded yet).
+    if (!passwordField) {
+        return;
+    }
+
+    // Check if the password field has content (autofilled).
+    // .value gives us the text inside the input box.
+    if (passwordField.value && passwordField.value.length > 0) {
+        console.log('Ring Auto-Reconnect: Detected filled password field. Attempting login...');
+
+        // Find the submit button
+        let submitButton = null;
+        for (const selector of CONFIG.loginSelectors.submit) {
+            if (selector.includes(':contains')) {
+                const match = selector.match(/button:contains\("(.+?)"\)/);
+                if (match) {
+                    const searchText = match[1];
+                    const buttons = document.querySelectorAll('button');
+                    for (const button of buttons) {
+                        if (button.textContent.trim().toLowerCase().includes(searchText.toLowerCase())) {
+                            submitButton = button;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                const el = document.querySelector(selector);
+                if (el && isElementVisible(el)) {
+                    submitButton = el;
+                    break;
+                }
+            }
+            if (submitButton) break;
+        }
+
+        if (submitButton) {
+            lastLoginTime = now;
+            console.log('Ring Auto-Reconnect: Found submit button, clicking...');
+            setTimeout(() => {
+                try {
+                    submitButton.click();
+                    console.log('Ring Auto-Reconnect: Clicked sign in button');
+                } catch (error) {
+                    console.error('Ring Auto-Reconnect: Error clicking sign in button', error);
+                }
+            }, CONFIG.reconnectDelay);
+        } else {
+            console.log('Ring Auto-Reconnect: Password filled but no submit button found.');
+        }
+    }
+  }
+
+  /**
    * FUNCTION: clickReconnect
    * ------------------------
    * The action hero. Tries to find the button and clicks it.
@@ -219,6 +300,8 @@
         if (mutation.type === 'childList' || mutation.type === 'characterData') {
           // Check if the reconnect button appeared
           clickReconnect();
+          // Also check if we need to log in
+          handleLogin();
           break; // Stop checking this batch of changes, we already triggered a check.
         }
       }
@@ -240,6 +323,7 @@
    */
   function periodicCheck() {
     clickReconnect();
+    handleLogin();
   }
   
   /**
